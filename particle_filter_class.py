@@ -5,18 +5,21 @@ import copy
 import matplotlib as plt
 import sys
 import math
+from typing import List
+
+def calculate_distance(x1, y1, x2, y2):
+    return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
 class Particle(object):
     """
-    Class of particle (cx, cy, sx, sy), corresponding to a rectangle bounding box
-        cx: col index of the center of rectangle (pixel)
-        cy: row index of the center of rectangle (pixel)
-
-
-        The following attrs are optional
-        weight: weight of this particle
-        sigmas: transition sigmas of this particle
+    Class representing a particle in a particle filter.
+    
+    Parameters:
+    cx (float): x-coordinate of the particle.
+    cy (float): y-coordinate of the particle.
+    sigmas (list): Standard deviations for the Gaussian transition model.
     """
+
     def __init__(self, cx=0, cy=0, sigmas=None):
         self.cx = cx
         self.cy = cy
@@ -37,8 +40,7 @@ class Particle(object):
             sigmas = dst_sigmas
         
         if dst_interval is None:
-            interval = 0.001
-            sys.exit(1)
+            raise ValueError("dst_interval cannot be None.")
         else:
             interval = dst_interval
         
@@ -69,7 +71,7 @@ class Particle(object):
         return self.weight <= ptc.weight
 
 
-def transition_step(particles, sigmas, interval):
+def transition_step(particles: List[Particle], sigmas: List[float], interval: float) -> List[Particle]:
     """
     Sample particles from Gaussian Distribution
     :param particles: Particle list
@@ -93,15 +95,15 @@ def weighting_step(particles, distance_diff_pre, tx_rx_pair,AnchorPos):
     """
     tx_pos = AnchorPos[tx_rx_pair[0]]
     rx_pos = AnchorPos[tx_rx_pair[1]]
-    tx_rx_distance = math.sqrt(math.pow((tx_pos[0] - rx_pos[0]),2) + math.pow((tx_pos[1] - rx_pos[1]),2))
+    tx_rx_distance = calculate_distance(tx_pos[0], tx_pos[1], rx_pos[0], rx_pos[1])
     weight = np.zeros(len(particles), dtype=np.float)
     i = 0
     sigma = 10
     scale = 1
     for particle in particles:
         # distance of particle to the anchor, and anchor to anchor
-        tx_distance = math.sqrt(math.pow((particle.cx - tx_pos[0]),2) + math.pow((particle.cy - tx_pos[1]),2))
-        rx_distance = math.sqrt(math.pow((particle.cx - rx_pos[0]),2) + math.pow((particle.cy - rx_pos[1]),2))
+        tx_distance = calculate_distance(particle.cx, particle.cy, tx_pos[0], tx_pos[1])
+        rx_distance = calculate_distance(particle.cx, particle.cy, rx_pos[0], rx_pos[1])
         distance_diff = tx_distance + rx_distance - tx_rx_distance
 
         # caulculate weight according to p(E|X) ;X is distance_diff;E is distance_diff_pre
@@ -141,14 +143,6 @@ def compute_similarities(features, template):
     """
     Compute similarities of a group of features with template
     :param features: features of particles
-    :template: template for matching
-    """
-    pass
-     
-def compute_similarity(feature, template):
-    """
-    Compute similarity of a single feature with template
-    :param feature: feature of a single particle
     :template: template for matching
     """
     pass

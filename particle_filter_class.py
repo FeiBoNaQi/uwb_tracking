@@ -6,6 +6,7 @@ import matplotlib as plt
 import sys
 import math
 from typing import List
+from concurrent.futures import ProcessPoolExecutor
 
 def calculate_distance(x1, y1, x2, y2):
     return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
@@ -96,7 +97,7 @@ def weighting_step(particles, distance_diff_pre, tx_rx_pair,AnchorPos):
     tx_pos = AnchorPos[tx_rx_pair[0]]
     rx_pos = AnchorPos[tx_rx_pair[1]]
     tx_rx_distance = calculate_distance(tx_pos[0], tx_pos[1], rx_pos[0], rx_pos[1])
-    weight = np.zeros(len(particles), dtype=np.float)
+    weight = np.zeros(len(particles), dtype=float)
     i = 0
     sigma = 10
     scale = 1
@@ -114,6 +115,33 @@ def weighting_step(particles, distance_diff_pre, tx_rx_pair,AnchorPos):
         i = i+1
     return weight
 
+# Define the helper function at the module level
+def update_particle(particle, sigmas, interval):
+    particle.transition(sigmas, interval)
+    return particle
+
+def transition_step_para(particles: List[Particle], sigmas: List[float], interval: float) -> List[Particle]:
+    with ProcessPoolExecutor() as executor:
+        particles = list(executor.map(update_particle, particles, [sigmas]*len(particles), [interval]*len(particles)))
+    return particles
+
+# Define the helper function at the module level
+def calculate_weight(particle, tx_pos, rx_pos, tx_rx_distance, distance_diff_pre, scale=1):
+    tx_distance = calculate_distance(particle.cx, particle.cy, tx_pos[0], tx_pos[1])
+    rx_distance = calculate_distance(particle.cx, particle.cy, rx_pos[0], rx_pos[1])
+    distance_diff = tx_distance + rx_distance - tx_rx_distance
+    return 1/(math.pi*scale)*math.pow(scale,2)/(math.pow(scale,2)+math.pow(distance_diff_pre-distance_diff,2))
+
+def weighting_step_para(particles, distance_diff_pre, tx_rx_pair, AnchorPos):
+    tx_pos = AnchorPos[tx_rx_pair[0]]
+    rx_pos = AnchorPos[tx_rx_pair[1]]
+    tx_rx_distance = calculate_distance(tx_pos[0], tx_pos[1], rx_pos[0], rx_pos[1])
+    scale = 1
+    
+    with ProcessPoolExecutor() as executor:
+        weights = list(executor.map(calculate_weight, particles, [tx_pos]*len(particles), [rx_pos]*len(particles), [tx_rx_distance]*len(particles), [distance_diff_pre]*len(particles), [scale]*len(particles)))
+    
+    return np.array(weights, dtype=float)
 
 def resample_step(particles, weights, rsp_sigmas=None):
     """

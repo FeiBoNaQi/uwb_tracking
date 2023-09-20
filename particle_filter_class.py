@@ -175,3 +175,16 @@ def compute_similarities(features, template):
     """
     pass
 
+def calculate_mean(particles):
+    total_cx = 0
+    total_cy = 0
+    n = len(particles)
+
+    for p in particles:
+        total_cx += p.cx
+        total_cy += p.cy
+
+    mean_cx = total_cx / n
+    mean_cy = total_cy / n
+
+    return mean_cx, mean_cy

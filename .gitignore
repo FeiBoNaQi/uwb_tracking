@@ -73,3 +73,5 @@ docs/_build/
 *.swp
 *.swo
 *.swn
+
+useful_commands.sh
